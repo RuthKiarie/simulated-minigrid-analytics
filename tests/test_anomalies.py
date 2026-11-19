@@ -1,10 +1,12 @@
 ﻿import pandas as pd
+
 from src.anomaly_lambda import (
     detect_diesel_spikes,
     detect_distribution_loss,
     detect_silent_meters,
     detect_voltage_sags,
 )
+
 
 def frame(rows):
     base = {

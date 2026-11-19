@@ -1,5 +1,6 @@
 ﻿import pandas as pd
 import pytest
+
 from src.schemas import route_quarantine, validate_dataframe
 
 GOOD = {

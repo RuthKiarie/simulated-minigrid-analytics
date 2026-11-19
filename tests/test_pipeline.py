@@ -3,6 +3,7 @@ from data.generate_data import generate
 from src.anomaly_lambda import run_all
 from src.schemas import validate_dataframe
 
+
 def test_pipeline_catches_every_injected_fault(tmp_path):
     result = generate(out_dir=str(tmp_path), seed=7, offline=True)
     valid, bad = validate_dataframe(result["telemetry"])
