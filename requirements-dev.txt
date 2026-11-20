@@ -1,5 +1,7 @@
-﻿-r requirements.txt
+-r requirements.txt
 pytest>=8.0
 ruff>=0.5
 moto[s3,sns,sqs]>=5.0
 cfn-lint>=1.0
+duckdb>=1.0
+sqlglot>=25.0

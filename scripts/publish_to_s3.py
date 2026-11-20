@@ -1,4 +1,10 @@
-﻿"""Validate telemetry locally, then publish raw, quarantine and curated files.
+"""Validate telemetry locally, then publish raw, quarantine and curated files.
+
+Keep one run per prefix when querying with Athena: each dated folder under
+curated/ and raw/ is read, so re-publishing on a new day doubles the rows.
+
+Keep one run per prefix when querying with Athena: each dated folder under
+curated/ and raw/ is read, so re-publishing on a new day doubles the rows.
 
 Curated is uploaded LAST: that upload triggers the anomaly Lambda, so the
 other files are already in place when it runs.
@@ -19,11 +25,12 @@ import pandas as pd
 
 from src.schemas import route_quarantine, validate_dataframe
 
-RAW_FILES = (
-    "smart_meter_telemetry.csv",
-    "salesforce_crm_customers.csv",
-    "accounting_mobile_money.csv",
-)
+# Each dataset gets its own prefix so the Athena tables only see their own files.
+RAW_FILES = {
+    "smart_meter_telemetry.csv": "raw/telemetry",
+    "salesforce_crm_customers.csv": "raw/customers",
+    "accounting_mobile_money.csv": "raw/ledger",
+}
 
 
 def main() -> None:

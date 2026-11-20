@@ -33,6 +33,12 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      LifecycleConfiguration:
+        Rules:
+          - Id: expire-athena-results
+            Status: Enabled
+            Prefix: athena-results/
+            ExpirationInDays: 7
       NotificationConfiguration:
         LambdaConfigurations:
           - Event: "s3:ObjectCreated:*"
@@ -161,6 +167,155 @@ Resources:
           MetricName: AnomalyAlerts
           MetricValue: "1"
 
+  # ---- Analytics layer: Glue catalogue, Athena workgroup ------------------
+  GlueDatabase:
+    Type: AWS::Glue::Database
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseInput:
+        Name: minigrid
+        Description: Mini-grid simulation tables; typed views are in sql/athena_views.sql
+
+  AthenaWorkGroup:
+    Type: AWS::Athena::WorkGroup
+    Properties:
+      Name: !Sub "${AWS::StackName}-wg"
+      State: ENABLED
+      WorkGroupConfiguration:
+        EnforceWorkGroupConfiguration: true
+        BytesScannedCutoffPerQuery: 1073741824
+        ResultConfiguration:
+          OutputLocation: !Sub "s3://${DataBucket}/athena-results/"
+          EncryptionConfiguration:
+            EncryptionOption: SSE_S3
+
+  RawTelemetryTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Name: raw_telemetry
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          classification: csv
+          skip.header.line.count: "1"
+        StorageDescriptor:
+          Location: !Sub "s3://${DataBucket}/curated/"
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.serde2.OpenCSVSerde
+            Parameters:
+              separatorChar: ","
+              quoteChar: "\""
+              escapeChar: "\\"
+          Columns:
+              - Name: ts_raw
+                Type: string
+              - Name: site
+                Type: string
+              - Name: meter_id
+                Type: string
+              - Name: feeder_id
+                Type: string
+              - Name: kwh
+                Type: string
+              - Name: voltage_v
+                Type: string
+              - Name: battery_soc_pct
+                Type: string
+              - Name: diesel_runtime_min
+                Type: string
+              - Name: irradiance_wm2
+                Type: string
+              - Name: site_generation_kwh
+                Type: string
+              - Name: site_net_supply_kwh
+                Type: string
+
+  RawCustomersTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Name: raw_customers
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          classification: csv
+          skip.header.line.count: "1"
+        StorageDescriptor:
+          Location: !Sub "s3://${DataBucket}/raw/customers/"
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.serde2.OpenCSVSerde
+            Parameters:
+              separatorChar: ","
+              quoteChar: "\""
+              escapeChar: "\\"
+          Columns:
+              - Name: customer_id
+                Type: string
+              - Name: site
+                Type: string
+              - Name: tier
+                Type: string
+              - Name: tariff_usd_per_kwh
+                Type: string
+
+  RawLedgerTable:
+    Type: AWS::Glue::Table
+    Properties:
+      CatalogId: !Ref AWS::AccountId
+      DatabaseName: !Ref GlueDatabase
+      TableInput:
+        Name: raw_ledger
+        TableType: EXTERNAL_TABLE
+        Parameters:
+          classification: csv
+          skip.header.line.count: "1"
+        StorageDescriptor:
+          Location: !Sub "s3://${DataBucket}/raw/ledger/"
+          InputFormat: org.apache.hadoop.mapred.TextInputFormat
+          OutputFormat: org.apache.hadoop.hive.ql.io.HiveIgnoreKeyTextOutputFormat
+          SerdeInfo:
+            SerializationLibrary: org.apache.hadoop.hive.serde2.OpenCSVSerde
+            Parameters:
+              separatorChar: ","
+              quoteChar: "\""
+              escapeChar: "\\"
+          Columns:
+              - Name: customer_id
+                Type: string
+              - Name: site
+                Type: string
+              - Name: tier
+                Type: string
+              - Name: month
+                Type: string
+              - Name: billed_kwh
+                Type: string
+              - Name: billed_usd
+                Type: string
+              - Name: currency
+                Type: string
+              - Name: billed_amount_local
+                Type: string
+              - Name: collected_amount_local
+                Type: string
+              - Name: payment_status
+                Type: string
+              - Name: days_overdue
+                Type: string
+
+  # ---- Analytics layer: Glue catalogue, Athena workgroup ------------------
+
+
+
+
+
 Outputs:
   BucketName:
     Value: !Ref DataBucket
@@ -170,3 +325,7 @@ Outputs:
     Value: !Ref AnomalyFunction
   LogGroup:
     Value: !Ref FunctionLogGroup
+  AthenaWorkGroupName:
+    Value: !Ref AthenaWorkGroup
+  GlueDatabaseName:
+    Value: !Ref GlueDatabase
