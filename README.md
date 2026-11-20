@@ -16,7 +16,8 @@ It practises the work of a data analyst on a mini-grid: bringing data from sever
 - Pulls **real** hourly solar irradiance and temperature from the NASA POWER API for each site.
 - Validates every telemetry row with Pydantic. Invalid rows go to a **quarantine** file with the reason, instead of being dropped silently.
 - Detects four kinds of anomaly with tested, documented rules (below).
-- 20 automated tests, including an end-to-end test that checks every injected fault is caught, plus a linter, run by GitHub Actions on every push.
+- 23 automated tests, including an end-to-end test that checks every injected fault is caught and tests of the Lambda handler against mocked AWS services, plus linting of the code and the CloudFormation template, run by GitHub Actions on every push.
+- Infrastructure as code (CloudFormation) and a publish script for the AWS deployment are written and tested locally. See [docs/DEPLOY.md](docs/DEPLOY.md). They have **not yet been deployed**.
 
 ## Data sources: real vs synthetic
 
@@ -77,6 +78,7 @@ python -m src.schemas data/raw/smart_meter_telemetry.csv
 
 # run the checks
 ruff check .
+cfn-lint infra/template.yaml --ignore-checks W3002
 pytest -q
 ```
 
@@ -107,7 +109,8 @@ simulated-minigrid-analytics/
 - [x] NASA POWER fetcher and synthetic data generator with injected faults
 - [x] Pydantic validation and quarantine
 - [x] Anomaly rules, unit tests and CI
-- [ ] Deploy to AWS: S3 (raw, curated, quarantine), Lambda anomaly handler, CloudWatch, SNS
+- [x] Infrastructure as code and deployment guide written (CloudFormation template, publish script, mocked-AWS tests)
+- [x] Deploy to AWS: S3 (raw, curated, quarantine), Lambda anomaly handler, CloudWatch, SNS
 - [ ] Athena SQL views for technical and accounting reporting
 - [ ] Three-tab QuickSight dashboard: executive overview, technical diagnostics, accounting reconciliation
 - [ ] Anomaly alerts from real deployed Lambda runs
@@ -131,4 +134,13 @@ Synthetic CSVs ──┘                                            └─> S3 c
                                                                         └─> Athena views ─> QuickSight
 ```
 
-The ingestion, validation and anomaly rules already run locally. The AWS parts are planned.
+The ingestion, validation and anomaly rules already run locally, and the AWS infrastructure is defined as code. It will be marked as deployed here only after it runs in a real AWS account, with screenshots.
+
+## AWS Deployment Proof
+
+### CloudFormation Stack & S3 Data Lake
+![S3 raw, curated, and quarantine prefixes](docs/images/s3-buckets-prefixes.png)
+
+### Lambda Anomaly Detection & SNS Email Alert
+![CloudWatch Lambda execution logs](docs/images/cloudwatch-lambda-logs.png)
+![SNS anomaly summary email alert](docs/images/sns-alert-email.png)
