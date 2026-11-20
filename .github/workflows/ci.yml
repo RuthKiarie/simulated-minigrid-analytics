@@ -12,4 +12,5 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements-dev.txt
       - run: ruff check .
+      - run: cfn-lint infra/template.yaml --ignore-checks W3002
       - run: pytest -q

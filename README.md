@@ -136,9 +136,10 @@ Synthetic CSVs ──┘                                            └─> S3 c
 
 The ingestion, validation and anomaly rules already run locally, and the AWS infrastructure is defined as code. It will be marked as deployed here only after it runs in a real AWS account, with screenshots.
 
+
 ## AWS Deployment Proof
 
-### CloudFormation Stack & S3 Data Lake
+### S3 Data Lake (`raw/`, `curated/`, `quarantine/`)
 ![S3 raw, curated, and quarantine prefixes](docs/images/s3-buckets-prefixes.png)
 
 ### Lambda Anomaly Detection & SNS Email Alert
