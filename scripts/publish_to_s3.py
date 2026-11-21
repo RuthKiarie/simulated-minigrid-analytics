@@ -43,7 +43,7 @@ def main() -> None:
     source = Path(args.source_dir)
     for name in RAW_FILES:
         s3.upload_file(str(source / name), args.bucket, f"raw/{run}/{name}")
-    valid, bad = validate_dataframe(pd.read_csv(source / RAW_FILES[0]))
+    valid, bad = validate_dataframe(pd.read_csv(source / next(iter(RAW_FILES))))
     route_quarantine(bad, f"s3://{args.bucket}/quarantine/{run}/telemetry_bad.csv")
     buffer = io.StringIO()
     valid.to_csv(buffer, index=False)
