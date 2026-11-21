@@ -1,7 +1,14 @@
-﻿import os
+﻿import logging
+import os
+
 import pandas as pd
 import streamlit as st
+from botocore.exceptions import BotoCoreError, ClientError
 from pyathena import connect
+from pyathena.error import Error as AthenaError
+from pyathena.pandas.cursor import PandasCursor
+
+LOGGER = logging.getLogger(__name__)
 
 DEFAULT_REGION = os.getenv("AWS_REGION", "us-east-1")
 DEFAULT_WORKGROUP = os.getenv("ATHENA_WORKGROUP", "minigrid-sim-wg")
@@ -17,10 +24,11 @@ st.title("DRC Mini-Grid Operations & Billing Dashboard")
 
 def get_aws_config() -> dict:
     try:
-        if "aws" in st.secrets:
-            return dict(st.secrets["aws"])
-    except Exception:
-        pass
+        aws_section = st.secrets.get("aws")
+        if aws_section is not None:
+            return dict(aws_section)
+    except (AttributeError, FileNotFoundError, KeyError, OSError, RuntimeError, TypeError) as exc:
+        LOGGER.debug("No [aws] section in st.secrets; falling back to defaults: %s", exc)
     return {}
 
 
@@ -35,15 +43,17 @@ def run_query(sql: str) -> pd.DataFrame:
         aws_access_key_id=aws_cfg.get("aws_access_key_id"),
         aws_secret_access_key=aws_cfg.get("aws_secret_access_key"),
         aws_session_token=aws_cfg.get("aws_session_token"),
+        cursor_class=PandasCursor,
     )
-    return pd.read_sql(sql, conn)
+    with conn.cursor() as cursor:
+        return cursor.execute(sql).as_pandas()
 
 
 try:
     site_daily = run_query("SELECT * FROM v_site_daily ORDER BY d DESC, site")
     alerts = run_query("SELECT * FROM v_alerts ORDER BY d DESC, site")
     billing = run_query("SELECT * FROM v_billing_reconciliation ORDER BY month DESC, site, tier")
-except Exception as exc:
+except (AthenaError, BotoCoreError, ClientError, OSError, RuntimeError, ValueError) as exc:
     st.error(f"Failed to query Athena ({DEFAULT_DATABASE} / {DEFAULT_WORKGROUP} in {DEFAULT_REGION}): {exc}")
     st.stop()
 
@@ -100,18 +110,18 @@ if not filtered_site.empty:
         st.caption(f"Daily {metric_cols[0]} by site")
         st.line_chart(chart_df)
     display_site = filtered_site.drop(columns=["d_parsed"], errors="ignore")
-    st.dataframe(display_site, use_container_width=True)
+    st.dataframe(display_site, width="stretch")
 else:
     st.info("No v_site_daily rows match the current filters.")
 
 st.subheader("Anomaly Alerts (v_alerts)")
 if not filtered_alerts.empty:
-    st.dataframe(filtered_alerts, use_container_width=True)
+    st.dataframe(filtered_alerts, width="stretch")
 else:
     st.info("No v_alerts rows match the current filters.")
 
 st.subheader("Billing Reconciliation (v_billing_reconciliation)")
 if not filtered_billing.empty:
-    st.dataframe(filtered_billing, use_container_width=True)
+    st.dataframe(filtered_billing, width="stretch")
 else:
     st.info("No v_billing_reconciliation rows match the current filters.")
