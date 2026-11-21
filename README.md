@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/RuthKiarie/simulated-minigrid-analytics/workflows/ci.yml/badge.svg)](https://github.com/RuthKiarie/simulated-minigrid-analytics/actions/workflows/ci.yml)
 
-> **Disclaimer and status (in progress, November 2026).** This is an **independent portfolio project**. It is not affiliated with, endorsed by or built on proprietary data from any company. Operational data (meters, customers, accounting) is **synthetic**. Only the solar irradiance and temperature inputs are real (NASA POWER). The AWS deployment and the QuickSight dashboard are **not built yet**; see the [roadmap](#roadmap).
+> **Disclaimer and status (in progress, November 2026).** This is an **independent portfolio project**. It is not affiliated with, endorsed by or built on proprietary data from any company. Operational data (meters, customers, accounting) is **synthetic**. Only the solar irradiance and temperature inputs are real (NASA POWER). 
 
 ## What this project is
 
@@ -10,14 +10,14 @@ A data pipeline that models how a solar-hybrid mini-grid operator could consolid
 
 It practises the work of a data analyst on a mini-grid: bringing data from several sources together, validating it before it reaches a report, flagging anomalies early and documenting every rule so a colleague can take it over.
 
-## What works today
+## What works
 
 - Generates a month of hourly telemetry for four sites, a 400-account customer table and a three-month mobile-money ledger.
 - Pulls **real** hourly solar irradiance and temperature from the NASA POWER API for each site.
 - Validates every telemetry row with Pydantic. Invalid rows go to a **quarantine** file with the reason, instead of being dropped silently.
 - Detects four kinds of anomaly with tested, documented rules (below).
 - 23 automated tests, including an end-to-end test that checks every injected fault is caught and tests of the Lambda handler against mocked AWS services, plus linting of the code and the CloudFormation template, run by GitHub Actions on every push.
-- Infrastructure as code (CloudFormation) and a publish script for the AWS deployment are written and tested locally. See [docs/DEPLOY.md](docs/DEPLOY.md). They have **not yet been deployed**.
+- Infrastructure as code (CloudFormation) and a publish script for the AWS deployment are written and tested locally.
 
 ## Data sources: real vs synthetic
 
@@ -111,9 +111,9 @@ simulated-minigrid-analytics/
 - [x] Anomaly rules, unit tests and CI
 - [x] Infrastructure as code and deployment guide written (CloudFormation template, publish script, mocked-AWS tests)
 - [x] Deploy to AWS: S3 (raw, curated, quarantine), Lambda anomaly handler, CloudWatch, SNS
-- [ ] Athena SQL views for technical and accounting reporting
-- [ ] Three-tab QuickSight dashboard: executive overview, technical diagnostics, accounting reconciliation
-- [ ] Anomaly alerts from real deployed Lambda runs
+- [x] Athena SQL views for technical and accounting reporting
+- [x] Streamlit dashboard (replacing Amazon QuickSight after setup/permission issues): daily telemetry, anomaly alerts and billing reconciliation
+- [x] Anomaly alerts from real deployed Lambda runs
 
 ## Limitations
 
@@ -121,6 +121,7 @@ simulated-minigrid-analytics/
 - Battery, diesel and demand behaviour is a simple model, not engineering-grade.
 - The anomaly thresholds are illustrative.
 - The cloud and dashboard layers are not built yet.
+- Amazon QuickSight could not be configured due to console/permission issues and was replaced by a Streamlit dashboard querying Athena directly.
 
 ## Planned architecture
 
@@ -131,10 +132,10 @@ Synthetic CSVs ──┘                                            └─> S3 c
                                                                         │
                                        Lambda anomaly detector <────────┤
                                        (CloudWatch logs + SNS alerts)   │
-                                                                        └─> Athena views ─> QuickSight
+                                                                        └─> Athena views ─> [FAILED: QuickSight] -> Streamlit
 ```
 
-The ingestion, validation and anomaly rules already run locally, and the AWS infrastructure is defined as code. It will be marked as deployed here only after it runs in a real AWS account, with screenshots.
+The ingestion, validation and anomaly rules already run locally, and the AWS infrastructure is defined as code and deployed as a Streamlit dashboard.
 
 
 ## AWS Deployment Proof
